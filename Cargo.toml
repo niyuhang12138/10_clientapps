@@ -1,9 +1,15 @@
-[package]
-name = "clientapps"
-version = "0.1.0"
-edition = "2021"
-license = "MIT"
+[workspace]
+members = ["hackernews"]
+resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile]
 
-[dependencies]
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
