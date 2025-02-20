@@ -8,10 +8,19 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.96"
+chrono = { version = "0.4.39", features = ["serde"] }
 dioxus = { version = "0.6.0", features = ["router", "fullstack"] }
+futures = "0.3.31"
+reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1.0.218", features = ["derive"] }
 
 [features]
 default = ["web"]
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
+
+[dev-dependencies]
+futures-test = "0.3.31"
+tokio = { version = "1.43.0", features = ["rt", "rt-multi-thread", "macros"] }
