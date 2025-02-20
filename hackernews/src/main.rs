@@ -1,16 +1,15 @@
 use dioxus::prelude::*;
 
-// #[derive(Debug, Clone, Routable, PartialEq)]
-// #[rustfmt::skip]
-// enum Route {
-//     #[layout(Navbar)]
-//     #[route("/")]
-//     Home {},
-//     #[route("/blog/:id")]
-//     Blog { id: i32 },
-// }
-
-const FAVICON: Asset = asset!("/assets/favicon.ico");
+#[derive(Debug, Clone, Routable, PartialEq)]
+#[rustfmt::skip]
+enum Route {
+    #[route("/")]
+    Home {},
+    #[route("/blog/:id")]
+    Blog { id: i32 },
+    #[route("/:..route")]
+    NotFound { route: Vec<String>},
+}
 
 fn main() {
     dioxus::launch(App);
@@ -19,49 +18,53 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        document::Link { rel: "icon", href: FAVICON }
-        // document::Link { rel: "stylesheet", href: MAIN_CSS } document::Link { rel: "stylesheet", href: TAILWIND_CSS }
 
         document::Stylesheet {
-            href: asset!( "/assets/main.css" )
-        }
-        document::Stylesheet {
-            href: asset!( "/assets/tailwind.css" )
+            href: asset!( "assets/tailwind.css" )
         }
 
-        body {
-            button {
-                class: "focus:outline-none text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900",
-                "Click me"
-            }
-
-            div {
-                class: "text-center text-40px",
-                "abcd"
-            }
-
-            a {
-                href: "#",
-                class: "block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700",
-
-                h5 {
-                    class: "mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white",
-                    "Noteworthy technology acquisitions 2021"
-                }
-
-                p {
-                    class: "font-normal text-gray-700 dark:text-gray-400",
-                    "Here are the biggest enterprise technology acquisitions of 2021 so far, in reverse chronological order."
-                }
-            }
-        }
-
-
+        Router::<Route> {}
     }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn hackernews_should_work() {}
+#[component]
+fn Blog(id: i32) -> Element {
+    rsx! {
+        Link { to: Route::Home {}, "Go to counter" }
+        div { class: "flex flex-col items-center justify-center h-screen",
+            h1 { class: "text-3xl p-4", "Blog post {id}" }
+        }
+    }
+}
+
+#[component]
+fn NotFound(route: Vec<String>) -> Element {
+    let path = route.join("/");
+    rsx! {
+        div { class: "flex flex-col items-center justify-center h-screen",
+            h1 { class: "text-3xl p-4", "Not Found: The page `/{path}` you requested is missing" }
+        }
+    }
+}
+
+#[component]
+fn Home() -> Element {
+    let mut count = use_signal(|| 0);
+
+    rsx! {
+        Link { to: Route::Blog { id: count() }, "Go to blog" }
+        div { class: "flex flex-col items-center justify-center h-screen",
+            h1 { class: "text-3xl p-4", "High-Five counter: {count}" }
+            button {
+                class: "text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800",
+                onclick: move |_| count += 1,
+                "Up high!"
+            }
+            button {
+                class: "focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900",
+                onclick: move |_| count -= 1,
+                "Down low!"
+            }
+        }
+    }
 }
