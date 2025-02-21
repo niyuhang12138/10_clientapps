@@ -1,3 +1,4 @@
+use dioxus_logger::tracing::Level;
 use hackernews::App;
 
 // use dioxus::prelude::*;
@@ -14,5 +15,6 @@ use hackernews::App;
 // }
 
 fn main() {
+    dioxus_logger::init(Level::INFO).expect("failed to init logger");
     dioxus::launch(App);
 }
