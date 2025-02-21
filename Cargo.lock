@@ -2522,6 +2522,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-shell",
  "tauri-plugin-window-state",
+ "tauri-runtime-wry",
  "tracing",
 ]
 

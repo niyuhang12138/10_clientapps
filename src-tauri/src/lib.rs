@@ -3,6 +3,18 @@ mod utils;
 
 use commands::get_app_dir;
 use commands::greet;
+use tauri::menu::CheckMenuItem;
+use tauri::menu::Menu;
+use tauri::menu::MenuItem;
+use tauri::menu::SubmenuBuilder;
+use tauri::tray::MouseButton;
+use tauri::tray::TrayIcon;
+use tauri::tray::TrayIconBuilder;
+use tauri::tray::TrayIconEvent;
+use tauri::AppHandle;
+use tauri::EventLoopMessage;
+use tauri::Manager;
+use tauri::Runtime;
 use tauri::{
     webview::PageLoadPayload, App, Builder, Webview, WebviewUrl, WebviewWindowBuilder, Window,
     WindowEvent, Wry,
@@ -12,6 +24,8 @@ use tauri_plugin_log::{Target, TargetKind};
 use tracing::debug;
 use tracing::info;
 use utils::log_dir;
+
+const APP_NAME: &str = "hn";
 
 pub fn app() -> anyhow::Result<Builder<Wry>> {
     let builder = tauri::Builder::default()
@@ -37,6 +51,8 @@ fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     {
         handle.plugin(tauri_plugin_window_state::Builder::new().build())?;
     }
+
+    set_up_menu(handle)?;
 
     let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default());
 
@@ -94,4 +110,113 @@ fn logger() -> tauri_plugin_log::Builder {
         ])
         .with_colors(ColoredLevelConfig::default())
         .level(tracing::log::LevelFilter::Info)
+}
+
+fn set_up_menu<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri::Error>
+where
+    AppHandle<R>: Manager<R>,
+    AppHandle<R>: Manager<tauri_runtime_wry::Wry<EventLoopMessage>>,
+{
+    let icon = app.default_window_icon().unwrap().clone();
+    // create submenu
+    let file_menu = SubmenuBuilder::with_id(app, "file", "File")
+        .item(&MenuItem::with_id(
+            app,
+            "open",
+            "Open",
+            true,
+            Some("CmdOrCtrl+O"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "save",
+            "Save",
+            true,
+            Some("CmdOrCtrl+S"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "save as",
+            "Save As",
+            true,
+            Some("CmdOrCtrl+Shift+S"),
+        )?)
+        .separator()
+        .quit()
+        .build()?;
+    let edit_menu = SubmenuBuilder::with_id(app, "edit", "Edit")
+        .item(&MenuItem::with_id(
+            app,
+            "process",
+            "Process",
+            true,
+            Some("CmdOrCtrl+P"),
+        )?)
+        .separator()
+        .undo()
+        .redo()
+        .cut()
+        .copy()
+        .paste()
+        .select_all()
+        .item(&CheckMenuItem::with_id(
+            app,
+            "check me",
+            "Check Me",
+            true,
+            true,
+            None::<&str>,
+        )?)
+        .build()?;
+    let tray_menu: tauri::menu::Submenu<R> = SubmenuBuilder::with_id(app, "tray", "Tray")
+        .item(&MenuItem::with_id(app, "open", "Open", true, None::<&str>)?)
+        .item(&MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?)
+        .separator()
+        .quit()
+        .build()?;
+    // create menu
+
+    // add menu to tray
+    let _ = TrayIconBuilder::with_id(format!("{APP_NAME}-tray"))
+        .tooltip("Hacker News")
+        .icon(icon)
+        .menu(&tray_menu)
+        .show_menu_on_left_click(true)
+        .on_tray_icon_event(|tray: &TrayIcon<R>, event| {
+            info!("Tray event: {:?}", event);
+            if let TrayIconEvent::Click {
+                button: MouseButton::Right,
+                ..
+            } = event
+            {
+                open_main(tray.app_handle()).unwrap();
+            }
+        })
+        // .build(app)?;
+        .build(app)?;
+    // ad menu to window
+    let menu = Menu::with_items(app, &[&file_menu, &edit_menu])?;
+
+    app.set_menu(menu)?;
+    app.on_menu_event(|app, event| {
+        info!("Menu event: {:?}", event);
+        match event.id.as_ref() {
+            "open" => open_main(app).unwrap(),
+            "save" => {}
+            "save as" => {}
+            "process" => {}
+            "check me" => {}
+            _ => {}
+        }
+    });
+
+    Ok(())
+}
+
+fn open_main<R: Runtime>(handle: &AppHandle<R>) -> Result<(), tauri::Error> {
+    handle
+        .get_webview_window("main")
+        .ok_or_else(|| tauri::Error::WindowNotFound)?
+        .show()?;
+    Ok(())
 }
