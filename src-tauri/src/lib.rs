@@ -7,10 +7,8 @@ use tauri::menu::CheckMenuItem;
 use tauri::menu::Menu;
 use tauri::menu::MenuItem;
 use tauri::menu::SubmenuBuilder;
-use tauri::tray::MouseButton;
 use tauri::tray::TrayIcon;
 use tauri::tray::TrayIconBuilder;
-use tauri::tray::TrayIconEvent;
 use tauri::AppHandle;
 use tauri::EventLoopMessage;
 use tauri::Manager;
@@ -68,6 +66,7 @@ fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             .content_protected(true);
     }
 
+    #[allow(unused_variables)]
     let web_view = builder.build()?;
 
     #[cfg(debug_assertions)]
@@ -112,7 +111,7 @@ fn logger() -> tauri_plugin_log::Builder {
         .level(tracing::log::LevelFilter::Info)
 }
 
-fn set_up_menu<R: Runtime>(app: &AppHandle<R>) -> Result<(), tauri::Error>
+fn set_up_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()>
 where
     AppHandle<R>: Manager<R>,
     AppHandle<R>: Manager<tauri_runtime_wry::Wry<EventLoopMessage>>,
@@ -168,33 +167,47 @@ where
             None::<&str>,
         )?)
         .build()?;
-    let tray_menu: tauri::menu::Submenu<R> = SubmenuBuilder::with_id(app, "tray", "Tray")
-        .item(&MenuItem::with_id(app, "open", "Open", true, None::<&str>)?)
-        .item(&MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?)
-        .separator()
-        .quit()
-        .build()?;
+    // let tray_menu: tauri::menu::Submenu<R> = SubmenuBuilder::with_id(app, "tray", "Tray")
+    //     .item(&MenuItem::with_id(app, "open", "Open", true, None::<&str>)?)
+    //     .item(&MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?)
+    //     .separator()
+    //     .quit()
+    //     .build()?;
+
+    let open: MenuItem<R> = MenuItem::with_id(app, "open", "Open", true, None::<&str>)?;
+    let hide: MenuItem<R> = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
+    let menu1: Menu<R> = Menu::with_items(app, &[&open, &hide])?;
     // create menu
 
     // add menu to tray
     let _ = TrayIconBuilder::with_id(format!("{APP_NAME}-tray"))
         .tooltip("Hacker News")
         .icon(icon)
-        .menu(&tray_menu)
-        .show_menu_on_left_click(true)
-        .on_tray_icon_event(|tray: &TrayIcon<R>, event| {
-            info!("Tray event: {:?}", event);
-            if let TrayIconEvent::Click {
-                button: MouseButton::Right,
-                ..
-            } = event
-            {
-                open_main(tray.app_handle()).unwrap();
+        .menu(&menu1)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| {
+            info!("on_menu_event ---> Tray menu event: {:?}", event);
+            match event.id.as_ref() {
+                "open" => open_main(app).unwrap(),
+                "hide" => {}
+                _ => {}
             }
         })
-        // .build(app)?;
+        .on_tray_icon_event(|_tray: &TrayIcon<R>, event| {
+            info!("on_tray_icon_event ---> Tray event: {:?}", event);
+            // if let TrayIconEvent::Click {
+            //     button: MouseButton::Right,
+            //     ..
+            // } = event
+            // {
+            //     open_main(tray.app_handle()).unwrap();
+            // }
+        })
         .build(app)?;
     // ad menu to window
+
+    /* ------------------------------------------- */
+
     let menu = Menu::with_items(app, &[&file_menu, &edit_menu])?;
 
     app.set_menu(menu)?;
